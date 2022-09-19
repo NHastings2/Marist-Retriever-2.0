@@ -14,9 +14,9 @@
     "async": "^3.2.4",
     "cookie-parser": "^1.4.6",
     "express": "^4.18.1",
-    "ftp-client": "^0.2.0",
     "glob": "^8.0.3",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "zos-node-accessor": "^1.0.12"
   },
   "engines": {
     "node": "16.17.0"
