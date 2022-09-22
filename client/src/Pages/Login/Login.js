@@ -2,7 +2,7 @@ import React from "react";
 import './Login.css';
 
 async function loginUser(credentials) {
-  return fetch('/api/login', {
+  return fetch('http://192.168.50.55:3001/api/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
