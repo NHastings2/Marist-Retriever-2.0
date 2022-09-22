@@ -22,13 +22,7 @@ app.use(cors({
         'Content-Type'
     ]
 }));
-app.use(helmet());
-
-app.use(function(req, res, next) {
-    res.header("Cross-Origin-Embedder-Policy", "require-corp");
-    res.header("Cross-Origin-Opener-Policy", "same-origin");
-    next();
-  });
+//app.use(helmet());
 
 //Setup json use in request body
 app.use(express.json());
