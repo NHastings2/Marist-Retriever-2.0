@@ -2,7 +2,7 @@ import React from "react";
 import './Login.css';
 
 async function loginUser(credentials) {
-  return fetch(process.env.HOST + '/api/login', {
+  return fetch('http://9393ace83c7f.ngrok.io/api/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
