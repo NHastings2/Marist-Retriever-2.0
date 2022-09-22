@@ -14,7 +14,7 @@ const app = express();
 //Setup Cookie Parser Use
 app.use(cookieParser());
 app.use(cors({
-    origin: '192.168.50.55',
+    origin: '*',
     methods: [
         'GET',
         'POST',

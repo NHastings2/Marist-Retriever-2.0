@@ -2,7 +2,7 @@ import React from "react";
 import './Login.css';
 
 async function loginUser(credentials) {
-  return fetch('http://192.168.50.55:3001/api/login', {
+  return fetch(process.env.HOST + '/api/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -37,6 +37,8 @@ export default function Login() {
       document.getElementById("#FailedLogin").innerText = "Invalid Username or Password";
     }
   };
+
+  console.log(process.env.HOST);
 
   return (
     <div className="Auth-form-container">
