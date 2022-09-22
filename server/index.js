@@ -12,7 +12,7 @@ const app = express();
 //Setup Cookie Parser Use
 app.use(cookieParser());
 app.use(cors({
-    origin: '*',
+    origin: '192.168.50.55',
     methods: [
         'GET',
         'POST',
@@ -23,6 +23,12 @@ app.use(cors({
     ]
 }));
 app.use(helmet());
+
+app.use(function(req, res, next) {
+    res.header("Cross-Origin-Embedder-Policy", "require-corp");
+    res.header("Cross-Origin-Opener-Policy", "same-origin");
+    next();
+  });
 
 //Setup json use in request body
 app.use(express.json());
