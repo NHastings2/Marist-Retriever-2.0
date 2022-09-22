@@ -1,8 +1,9 @@
 const express = require("express");
 const path = require('path');
 const cookieParser = require('cookie-parser');
-const url = require("url");
 const zosConnector = require("zos-node-accessor");
+const cors = require('cors');
+const helmet = require('helmet');
 
 const PORT = process.env.PORT || 3001;
 
@@ -10,6 +11,18 @@ const app = express();
 
 //Setup Cookie Parser Use
 app.use(cookieParser());
+app.use(cors({
+    origin: '*',
+    methods: [
+        'GET',
+        'POST',
+        'DELETE'
+    ],
+    allowedHeader: [
+        'Content-Type'
+    ]
+}));
+app.use(helmet());
 
 //Setup json use in request body
 app.use(express.json());
@@ -19,66 +32,97 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.resolve(__dirname, '../client/build')));
 
 app.get("/api", (req, res) => {
-    res.json({ message: "Hello from server!" });
+    res.json({ message: "Test Message"});
 });
 
-app.post("/api/login", (req, res) => {
+app.post("/api/login", async (req, res) => {
+    var accessor = new zosConnector();
+
     console.log(req.body);
 
-    res.cookie(`username`, req.body.user, {
-        sameSite: "lax",
-        expires: addMonths(5)
-    });
-    res.cookie(`password`, req.body.pass, {
-        sameSite: "lax",
-        expires: addMonths(5)
-    });
+    try
+    {
+        await accessor.connect({
+            user: req.body.username,
+            password: req.body.password,
+            host: "zos.kctr.marist.edu",
+            post: 21,
+            pasvTimeout: 5000,
+        });
 
-    res.send("Logged In Successfully");
-});
+        accessor.close();
 
-app.get("/api/logout", (req, res) => {
-    res.clearCookie(`username`);
-    res.clearCookie(`password`);
+        var buffer = Buffer.from(`${req.body.username}:${req.body.password}`, "utf-8");
+        var token = buffer.toString("base64");
 
-    res.send("Logged Out Successfully");
+        res.json({
+            "success": true,
+            "token": token
+        });
+    }
+    catch(err)
+    {
+        res.json({
+            "success": false,
+            "token": token
+        });
+    }
 });
 
 app.get("/api/jobs", async (req, res) => {
-    var accessor = new zosConnector();
-
-    await accessor.connect({
-        user: req.cookies.username,
-        password: req.cookies.password,
-        host: "zos.kctr.marist.edu",
-        post: 21,
-        pasvTimeout: 60000,
-    });
-
-    var jobs = await accessor.listJobs({ owner: `${req.cookies.username}A`});
-    accessor.close();
-    
-    var jobIds = [];
-    if(jobs[0] != 'No jobs found on Held queue')
+    if(req.headers["token"] != null)
     {
-        for(let i = 0; i < jobs.length; i++)
-            jobIds.push(jobs[i].split('  ')[1]);
+        var accessor = new zosConnector();
+
+        var tokenEnc = req.headers["token"];
+        var tokenData = Buffer.from(tokenEnc, "base64").toString("utf-8").split(":");
+
+        await accessor.connect({
+            user: tokenData[0],
+            password: tokenData[1],
+            host: "zos.kctr.marist.edu",
+            post: 21,
+            pasvTimeout: 60000,
+        });
+
+        var jobs = await accessor.listJobs({ owner: `${tokenData[0]}A`});
+        accessor.close();
+        
+        var jobIds = [];
+        if(jobs[0] != 'No jobs found on Held queue')
+        {
+            for(let i = 0; i < jobs.length; i++)
+            {
+                jobIds.push(
+                    {
+                        jobOwner: jobs[i].split('  ')[0], 
+                        jobID: jobs[i].split('  ')[1]
+                    }
+                );
+            }
+        }
+
+        console.log(jobIds);
+        res.setHeader("Content-Type", "application/json");
+        res.send(JSON.stringify(jobIds));
     }
     else
     {
-        jobIds.push('No Jobs Available');
+        res.send('Must Be Logged In!');
     }
-
-    console.log(jobIds);
-    res.send(JSON.stringify(jobIds));
 });
 
 app.get('/api/jobs/:id', async (req, res) => {
+    if(req.headers["token"] != null)
+    {
         var accessor = new zosConnector();
 
+        var tokenEnc = req.headers["token"];
+        var tokenData = Buffer.from(tokenEnc, "base64").toString("utf-8").split(":");
+
         await accessor.connect({
-            user: req.cookies.username,
-            password: req.cookies.password,
+            user: tokenData[0],
+            password: tokenData[1],
             host: "zos.kctr.marist.edu",
             post: 21,
             pasvTimeout: 60000,
@@ -86,28 +130,67 @@ app.get('/api/jobs/:id', async (req, res) => {
 
         var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
 
+        var finalData = "";
+        var lines = data.split('\r\n');
+
+        lines.forEach(line => {
+            if(line.includes("!! END OF JES SPOOL FILE !!")) {   
+
+            }
+            else if(line.startsWith("0")) {
+                finalData += "\n" + line.substring(1, line.length) + "\n";
+            }
+            else if(line.startsWith("1")) {
+                finalData += "\f\n" + line.substring(1, line.length) + "\n";
+            }
+            else if (line.startsWith("-")) {
+                finalData += "\n\n" + line.substring(1, line.length) + "\n";
+            }
+            else if(line.startsWith(" ")) {
+                finalData += line.substring(1, line.length) + "\n";
+            }
+            else {
+                finalData += line + "\n";
+            }
+        });
+
         accessor.close();
 
-        res.send(data);
+        res.send(finalData);
+    }
+    else
+    {
+        res.send("Must Be Logged In!");
+    }
 });
 
 app.delete("/api/jobs/:id", async (req, res) => {
-    var accessor = new zosConnector();
+    if(req.headers["token"] != null)
+    {
+        var accessor = new zosConnector();
 
-    await accessor.connect({
-        user: req.cookies.username,
-        password: req.cookies.password,
-        host: "zos.kctr.marist.edu",
-        post: 21,
-        pasvTimeout: 60000,
-    });
+        var tokenEnc = req.headers["token"];
+        var tokenData = Buffer.from(tokenEnc, "base64").toString("utf-8").split(":");
 
-    console.log(`Deleting ${req.params.id}`);
-    await accessor.deleteJob(req.params.id);
+        await accessor.connect({
+            user: tokenData[0],
+            password: tokenData[1],
+            host: "zos.kctr.marist.edu",
+            post: 21,
+            pasvTimeout: 60000,
+        });
 
-    accessor.close();
+        console.log(`Deleting ${req.params.id}`);
+        await accessor.deleteJob(req.params.id);
 
-    res.send(`Job ${req.params.id} Deleted`)
+        accessor.close();
+
+        res.send(`Job ${req.params.id} Deleted`)
+    }
+    else
+    {
+        res.send("Must Be Logged In!");
+    }
 });
 
 app.get('*', (req, res) => {
@@ -117,9 +200,3 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server Listening on ${PORT}`);
 });
-
-function addMonths(numofMonths, date = new Date()) {
-    date.setMonth(date.getMonth() + numofMonths);
-
-    return date;
-}

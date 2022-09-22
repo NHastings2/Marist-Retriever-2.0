@@ -1,25 +1,18 @@
 import React from "react";
+import { Cookies } from 'react-cookie';
 
-import logo from './logo.svg';
+import "bootstrap/dist/css/bootstrap.min.css"
 import './App.css';
 
-function App() {
-  const [data, setData] = React.useState(null);
+import Login from './Pages/Login/Login';
+import Jobs from './Pages/Jobs/Jobs';
 
-  React.useEffect(() => {
-    fetch("/api")
-      .then((res) => res.json())
-      .then((data) => setData(data.message));
-  }, []);
+export default function App() {
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>{!data ? "Loading..." : data}</p>
-      </header>
-    </div>
-  );
+  const cookies = new Cookies();
+
+  if(!localStorage.getItem("token"))
+    return <Login />
+  else
+    return <Jobs />
 }
-
-export default App;
