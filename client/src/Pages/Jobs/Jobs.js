@@ -4,7 +4,7 @@ import "./Jobs.css";
 import "bootstrap/dist/css/bootstrap.min.css"
 
 async function getJobs() {
-    const response = await fetch('http://9393ace83c7f.ngrok.io/api/jobs', {
+    const response = await fetch('https://9393ace83c7f.ngrok.io/api/jobs', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -21,7 +21,7 @@ async function getJobs() {
 }
 
 async function getJob(jobID) {
-    return fetch('http://9393ace83c7f.ngrok.io/api/jobs/' + jobID, {
+    return fetch('https://9393ace83c7f.ngrok.io/api/jobs/' + jobID, {
     method: 'GET',
     headers: {
         'Content-Type': 'application/json',
@@ -35,7 +35,7 @@ async function getJob(jobID) {
 }
 
 async function deleteJob(jobID) {
-    return fetch('http://9393ace83c7f.ngrok.io/api/jobs/' + jobID, {
+    return fetch('https://9393ace83c7f.ngrok.io/api/jobs/' + jobID, {
     method: 'DELETE',
     headers: {
         'Content-Type': 'application/json',
