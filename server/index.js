@@ -4,6 +4,7 @@ const express = require("express");
 const path = require('path');
 const zosConnector = require("zos-node-accessor");
 const cors = require('cors');
+const helmet = require('helmet');
 
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
@@ -23,6 +24,9 @@ app.use(cors({
         'Content-Type'
     ]
 }));
+
+//Setup CORS helmet instance
+app.use(helmet());
 
 //Setup json use in request body
 app.use(express.json());
