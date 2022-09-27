@@ -17,3 +17,6 @@ npm run build
 
 ##Restart Service
 sudo systemctl start marist
+
+##Chmod update script
+sudo chmod +x update.sh
