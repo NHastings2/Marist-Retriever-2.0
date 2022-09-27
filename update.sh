@@ -13,7 +13,7 @@ sudo chmox +x index.js
 cd ..
 
 ##Build new Website
-npm run Build
+npm run build
 
 ##Restart Service
 sudo systemctl start marist
