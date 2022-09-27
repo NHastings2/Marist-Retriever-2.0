@@ -1,7 +1,13 @@
 import React from "react";
 import './Login.css';
 
+/**
+ * Authenticate user with provided credentials
+ * @param {credential json} credentials 
+ * @returns Response JSON from server
+ */
 async function loginUser(credentials) {
+  //Send auth request to API server
   return fetch('/api/login', {
     method: 'POST',
     headers: {
@@ -16,29 +22,37 @@ async function loginUser(credentials) {
 }
 
 export default function Login() {
+  //State containing username and password
   const [username, setUsername] = React.useState(null);
   const [password, setPassword] = React.useState(null);
 
+  /**
+   * Handle when user attempts to login
+   */
   const handleLogin = async e => {
     e.preventDefault();
 
+    //Execute authentication request
     const response = await loginUser({
       username,
       password
     });
 
+    //If auth is successful
     if(response.success)
     {
+      //Set token to local storage
       localStorage.setItem('token', response.token);
+      //Reload window to render jobs page
       window.location.reload();
     }
+    //If auth failed
     else
     {
+      //Set Failed text to invalid username and password
       document.getElementById("#FailedLogin").innerText = "Invalid Username or Password";
     }
   };
-
-  console.log(process.env.HOST);
 
   return (
     <div className="Auth-form-container">

@@ -8,6 +8,7 @@ import Jobs from './Pages/Jobs/Jobs';
 
 export default function App() {
 
+  //If user is not logged in, send to login page
   if(!localStorage.getItem("token"))
     return <Login />
   else

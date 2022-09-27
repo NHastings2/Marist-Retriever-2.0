@@ -10,7 +10,7 @@ async function getJobs() {
             'Content-Type': 'application/json',
             'token': localStorage.getItem('token')
         },
-        })
+    })
         
     const data = await response.json();
 
