@@ -1,94 +1,86 @@
 import React from "react";
 import "./Jobs.css";
 
+import { getJobs, getJob, deleteJob } from "./Marist";
+
 import "bootstrap/dist/css/bootstrap.min.css"
 
-async function getJobs() {
-    const response = await fetch('/api/jobs', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'token': localStorage.getItem('token')
-        },
-    })
-        
-    const data = await response.json();
-
-    return data.map(({jobOwner, jobID}) => ({
-        jobID: jobID,
-        jobOwner: jobOwner
-    }));
-}
-
-async function getJob(jobID) {
-    return fetch('/api/jobs/' + jobID, {
-    method: 'GET',
-    headers: {
-        'Content-Type': 'application/json',
-        'token': localStorage.getItem('token')
-    },
-    })
-    .then((data) => data)
-    .then((response) => {
-        return response.text();
-    })
-}
-
-async function deleteJob(jobID) {
-    return fetch('/api/jobs/' + jobID, {
-    method: 'DELETE',
-    headers: {
-        'Content-Type': 'application/json',
-        'token': localStorage.getItem('token')
-    },
-    })
-    .then(data => JSON.parse(data))
-    .then((response) => {
-        return response.text();
-    })
-}
-
 export default function Jobs() {
+    //Setup state for storing job list
     const [jobs, setJobs] = React.useState([]);
 
+    /**
+     * Retrieve a list of all jobs from server
+     */
     const retrieveJobs = () => {
+        //Query and set job list
         getJobs().then((data) => setJobs(data));
     }
 
+    /**
+     * Delete specified job from server
+     * @param {string} jobId 
+     */
     const removeJob = (jobId) => {
+        //Delete the job and then update list
         deleteJob(jobId).then(retrieveJobs());
     }
 
+    /**
+     * Delete all jobs from server
+     */
     const purgeJobs = () => {
+        //Retrieve all current jobs
         getJobs().then((data) => setJobs(data));
 
+        //Delete each job from the list
         jobs.forEach(job => {
             deleteJob(job.jobID).then();
         });
 
+        //Retrieve update job list from server
         getJobs().then((data) => setJobs(data));
     }
 
+    /**
+     * Download output from server
+     * @param {string} jobId 
+     */
     const downloadJob = (jobId) => {
+        //Download job output from server
         getJob(jobId).then((data) => {
+            //Create empty element
             const element = document.createElement("a");
+
+            //Create new plain text file with output data
             const file = new Blob([data], {
                 type: "text/plain"
             });
 
+            //Set object URL to empty element
             element.href = URL.createObjectURL(file);
+            //Set the download name to the job ID
             element.download = `${jobId}.txt`;
+            //Add the element to the current page
             document.body.appendChild(element);
+            //Click the element to download the file
             element.click();
+            //Delete the element from the page
             document.body.removeChild(element);
         });
     }
 
+    /**
+     * Logout user from app
+     */
     const logout = () => {
+        //Delete the token from storage
         localStorage.removeItem('token');
+        //Reload the page to goto login
         window.location.reload();
     }
 
+    //Render page with job data and elements
     return(
         <div className="home-container">
             <header data-role="Header" className="home-header">
