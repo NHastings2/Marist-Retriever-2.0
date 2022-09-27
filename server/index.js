@@ -2,7 +2,6 @@
 
 const express = require("express");
 const path = require('path');
-const cookieParser = require('cookie-parser');
 const zosConnector = require("zos-node-accessor");
 const cors = require('cors');
 const helmet = require('helmet');
@@ -13,8 +12,7 @@ const PORT = process.env.PORT || 3001;
 //Create app instance
 const app = express();
 
-//Setup Cookie Parser Use
-app.use(cookieParser());
+//Set CORS settings
 app.use(cors({
     origin: '*',
     methods: [
