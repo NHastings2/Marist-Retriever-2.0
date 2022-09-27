@@ -9,7 +9,7 @@ git pull
 
 ## Make the JS file executable
 cd ./server
-sudo chmox +x index.js
+sudo chmod +x index.js
 cd ..
 
 ##Build new Website
