@@ -9,11 +9,14 @@ git pull
 
 ## Make the JS file executable
 cd ./server
-sudo chmox +x index.js
+sudo chmod +x index.js
 cd ..
 
 ##Build new Website
-npm run Build
+npm run build
 
 ##Restart Service
 sudo systemctl start marist
+
+##Chmod update script
+sudo chmod +x update.sh
