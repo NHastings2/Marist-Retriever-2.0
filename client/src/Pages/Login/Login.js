@@ -41,8 +41,6 @@ export default function Login() {
     //If auth is successful
     if(response.success)
     {
-      //Set token to local storage
-      localStorage.setItem('token', response.token);
       //Reload window to render jobs page
       window.location.reload();
     }

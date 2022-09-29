@@ -5,6 +5,8 @@ const path = require('path');
 const zosConnector = require("zos-node-accessor");
 const cors = require('cors');
 const helmet = require('helmet');
+const session = require('express-session');
+const cookieParser = require("cookie-parser");
 
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
@@ -32,6 +34,23 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+//Setup Cookie Parser
+app.use(cookieParser());
+
+const tokenAge = (1000 * 60 * 60 * 24) * 30;
+
+//Setup Session Middleware
+app.use(session({ 
+    secret: "Kwkl2wA5Xk6!OJBM6*m*%BKkTp*P5B",
+    saveUninitialized: false,
+    cookie: { 
+        maxAge: tokenAge,
+        httpOnly: false
+    },
+    resave: false
+}));
+
+
 //Set use of React Frontend
 app.use(express.static(path.resolve(__dirname, '../client/build')));
 
@@ -56,23 +75,35 @@ app.post("/api/login", async (req, res) => {
         accessor.close();
 
         //Create token from provided username and password
-        var buffer = Buffer.from(`${req.body.username}:${req.body.password}`, "utf-8");
-        var token = buffer.toString("base64");
+        var session = req.session;
+        session.userid = req.body.username;
+        session.password = req.body.password;
 
         //Send token json response
         res.json({
             "success": true,
-            "token": token
         });
     }
     catch(err)
     {
+        console.log(err);
         //If login is unsuccessful then send unsuccessful login response
         res.json({
             "success": false,
-            "token": token
         });
     }
+});
+
+/**
+ * Logout user from application
+ */
+app.get('/api/logout', (req, res) => {
+    //Destroy session token
+    req.session.destroy();
+    //Destroy Cookie
+    res.clearCookie("connect.sid");
+    //Send back response
+    res.send("Success");
 });
 
 /**
@@ -81,26 +112,22 @@ app.post("/api/login", async (req, res) => {
 app.get("/api/jobs", async (req, res) => {
 
     //Check if user provided auth token
-    if(req.headers["token"] != null)
+    if(req.session.userid)
     {
         //Create new zos accessor instance
         var accessor = new zosConnector();
 
-        //Retrieve and parse user token
-        var tokenEnc = req.headers["token"];
-        var tokenData = Buffer.from(tokenEnc, "base64").toString("utf-8").split(":");
-
         //Connect to marist server
         await accessor.connect({
-            user: tokenData[0],
-            password: tokenData[1],
+            user: req.session.userid,
+            password: req.session.password,
             host: "zos.kctr.marist.edu",
             post: 21,
             pasvTimeout: 60000,
         });
 
         //Get all jobs with user as owner
-        var jobs = await accessor.listJobs({ owner: `${tokenData[0]}A`});
+        var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
         accessor.close();
         
         //Check if there are jobs in the queue
@@ -128,7 +155,7 @@ app.get("/api/jobs", async (req, res) => {
     {
         //If user is not authenticated then send 401
         res.status(401);
-        res.send('Invalid Token Provided');
+        res.send('Invalid Session Provided');
     }
 });
 
@@ -139,19 +166,15 @@ app.get("/api/jobs", async (req, res) => {
 app.get('/api/jobs/:id', async (req, res) => {
 
     //Check if user provided auth token
-    if(req.headers["token"] != null)
+    if(req.session.userid)
     {
         //Create zos accessor instance
         var accessor = new zosConnector();
 
-        //Get and parse user token
-        var tokenEnc = req.headers["token"];
-        var tokenData = Buffer.from(tokenEnc, "base64").toString("utf-8").split(":");
-
         //Connect to marist server
         await accessor.connect({
-            user: tokenData[0],
-            password: tokenData[1],
+            user: req.session.userid,
+            password: req.session.password,
             host: "zos.kctr.marist.edu",
             post: 21,
             pasvTimeout: 60000,
@@ -195,7 +218,7 @@ app.get('/api/jobs/:id', async (req, res) => {
     {
         //If user is not authenticated then send 401
         res.status(401);
-        res.send('Invalid Token Provided');
+        res.send('Invalid Session Provided');
     }
 });
 
@@ -206,19 +229,15 @@ app.get('/api/jobs/:id', async (req, res) => {
 app.delete("/api/jobs/:id", async (req, res) => {
 
     //Check if user has provided auth token
-    if(req.headers["token"] != null)
+    if(req.session.userid)
     {
         //Create zos accessor instance
         var accessor = new zosConnector();
 
-        //Get and parse provided user auth token
-        var tokenEnc = req.headers["token"];
-        var tokenData = Buffer.from(tokenEnc, "base64").toString("utf-8").split(":");
-
         //Connect to marist server
         await accessor.connect({
-            user: tokenData[0],
-            password: tokenData[1],
+            user: req.session.userid,
+            password: req.session.password,
             host: "zos.kctr.marist.edu",
             post: 21,
             pasvTimeout: 60000,
@@ -237,7 +256,7 @@ app.delete("/api/jobs/:id", async (req, res) => {
     {
         //If user is not authenticated then send 401
         res.status(401);
-        res.send('Invalid Token Provided');
+        res.send('Invalid Session Provided');
     }
 });
 

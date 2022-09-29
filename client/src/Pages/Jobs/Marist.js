@@ -6,9 +6,6 @@
     //Request user jobs from server
     const response = await fetch('/api/jobs', {
         method: 'GET',
-        headers: {
-            'token': localStorage.getItem('token')
-        },
     })
         
     //Parse the json response
@@ -30,9 +27,6 @@ export async function getJob(jobID) {
     //Get job data from API server
     return fetch('/api/jobs/' + jobID, {
         method: 'GET',
-        headers: {
-            'token': localStorage.getItem('token')
-        },
     })
     .then((data) => data)
     .then((response) => {
@@ -46,13 +40,20 @@ export async function getJob(jobID) {
  */
 export async function deleteJob(jobID) {
     return fetch('/api/jobs/' + jobID, {
-    method: 'DELETE',
-    headers: {
-        'token': localStorage.getItem('token')
-    },
+        method: 'DELETE',
     })
     .then(data => JSON.parse(data))
     .then((response) => {
         return response.text();
     })
+}
+
+export async function logoutUser() {
+    return fetch('/api/logout', {
+        method: 'GET'
+    })
+    .then(data => data)
+    .then((response) => {
+        return response.text();
+    });
 }
