@@ -19,22 +19,6 @@
 }
 
 /**
- * Get JES output by ID
- * @param {string} jobID 
- * @returns String of JES output text
- */
-export async function getJob(jobID) {
-    //Get job data from API server
-    return fetch('/api/jobs/' + jobID, {
-        method: 'GET',
-    })
-    .then((data) => data)
-    .then((response) => {
-        return response.text();
-    })
-}
-
-/**
  * Delete Job by ID
  * @param {string} jobID 
  */

@@ -212,6 +212,11 @@ app.get('/api/jobs/:id', async (req, res) => {
             }
         });
 
+        //Set Download Headers
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
+
+        //Send Download Content
         res.send(finalData);
     }
     else

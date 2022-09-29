@@ -48,26 +48,7 @@ export default function Jobs() {
      */
     const downloadJob = (jobId) => {
         //Download job output from server
-        getJob(jobId).then((data) => {
-            //Create empty element
-            const element = document.createElement("a");
-
-            //Create new plain text file with output data
-            const file = new Blob([data], {
-                type: "text/plain"
-            });
-
-            //Set object URL to empty element
-            element.href = URL.createObjectURL(file);
-            //Set the download name to the job ID
-            element.download = `${jobId}.txt`;
-            //Add the element to the current page
-            document.body.appendChild(element);
-            //Click the element to download the file
-            element.click();
-            //Delete the element from the page
-            document.body.removeChild(element);
-        });
+        window.location.href = "/api/jobs/" + jobId;
     }
 
     /**
