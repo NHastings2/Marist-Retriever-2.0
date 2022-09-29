@@ -1,4 +1,5 @@
 import React from "react";
+import { withCookies } from "react-cookie";
 
 import "bootstrap/dist/css/bootstrap.min.css"
 import './App.css';
@@ -6,11 +7,18 @@ import './App.css';
 import Login from './Pages/Login/Login';
 import Jobs from './Pages/Jobs/Jobs';
 
-export default function App() {
+class App extends React.Component
+{
+  render() {
+    //Get cookies from client
+    const {cookies} = this.props;
 
-  //If user is not logged in, send to login page
-  if(!localStorage.getItem("token"))
-    return <Login />
-  else
-    return <Jobs />
+    //Check if user is logged in
+    if(!cookies.get('connect.sid'))
+      return <Login />
+    else
+      return <Jobs />
+  }
 }
+
+export default withCookies(App);

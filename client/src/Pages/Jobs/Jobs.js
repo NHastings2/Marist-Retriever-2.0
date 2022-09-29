@@ -1,7 +1,7 @@
 import React from "react";
 import "./Jobs.css";
 
-import { getJobs, getJob, deleteJob } from "./Marist";
+import { getJobs, getJob, deleteJob, logoutUser } from "./Marist";
 
 import "bootstrap/dist/css/bootstrap.min.css"
 
@@ -74,10 +74,9 @@ export default function Jobs() {
      * Logout user from app
      */
     const logout = () => {
-        //Delete the token from storage
-        localStorage.removeItem('token');
-        //Reload the page to goto login
-        window.location.reload();
+        logoutUser().then(() => {
+            window.location.reload();
+        });
     }
 
     //Render page with job data and elements

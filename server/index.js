@@ -30,6 +30,10 @@ app.use(cors({
 //Setup CORS helmet instance
 app.use(helmet());
 
+//Setup json use in request body
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 //Setup Cookie Parser
 app.use(cookieParser());
 
@@ -38,14 +42,14 @@ const tokenAge = (1000 * 60 * 60 * 24) * 30;
 //Setup Session Middleware
 app.use(session({ 
     secret: "Kwkl2wA5Xk6!OJBM6*m*%BKkTp*P5B",
-    saveUninitialized: true,
-    cookie: { maxAge: tokenAge },
+    saveUninitialized: false,
+    cookie: { 
+        maxAge: tokenAge,
+        httpOnly: false
+    },
     resave: false
-}))
+}));
 
-//Setup json use in request body
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 //Set use of React Frontend
 app.use(express.static(path.resolve(__dirname, '../client/build')));
@@ -71,7 +75,7 @@ app.post("/api/login", async (req, res) => {
         accessor.close();
 
         //Create token from provided username and password
-        const session = req.session;
+        var session = req.session;
         session.userid = req.body.username;
         session.password = req.body.password;
 
@@ -82,6 +86,7 @@ app.post("/api/login", async (req, res) => {
     }
     catch(err)
     {
+        console.log(err);
         //If login is unsuccessful then send unsuccessful login response
         res.json({
             "success": false,
@@ -89,8 +94,15 @@ app.post("/api/login", async (req, res) => {
     }
 });
 
+/**
+ * Logout user from application
+ */
 app.get('/api/logout', (req, res) => {
+    //Destroy session token
     req.session.destroy();
+    //Destroy Cookie
+    res.clearCookie("connect.sid");
+    //Send back response
     res.send("Success");
 });
 
