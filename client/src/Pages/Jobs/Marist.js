@@ -7,7 +7,6 @@
     const response = await fetch('/api/jobs', {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json',
             'token': localStorage.getItem('token')
         },
     })
@@ -32,7 +31,6 @@ export async function getJob(jobID) {
     return fetch('/api/jobs/' + jobID, {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json',
             'token': localStorage.getItem('token')
         },
     })
@@ -50,7 +48,6 @@ export async function deleteJob(jobID) {
     return fetch('/api/jobs/' + jobID, {
     method: 'DELETE',
     headers: {
-        'Content-Type': 'application/json',
         'token': localStorage.getItem('token')
     },
     })
