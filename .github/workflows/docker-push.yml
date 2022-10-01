@@ -1,12 +1,7 @@
 name: Docker Build
 
 on:
-  push:
-    branches:
-      - 'main'
-      - 'release'
-    tags:
-      - 'v*'
+  workflow_dispatch
 
 env:
   REGISTRY: ghcr.io
@@ -31,16 +26,6 @@ jobs:
         uses: docker/metadata-action@v2
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      
-      - name: Build and Push Versioned Docker Image
-        id: build-and-push
-        uses: docker/build-push-action@v2
-        if: ${{ github.ref != 'refs/heads/main' }}
-        with:
-          context: ./src
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ setps.meta.outputs.labels }}
       
       - name: Build and Push Latest Docker Image
         id: build-and-push-latest
