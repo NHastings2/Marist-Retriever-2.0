@@ -28,4 +28,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: hastingsn25/marist-app:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/marist-app:latest
