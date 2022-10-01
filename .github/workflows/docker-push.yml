@@ -5,7 +5,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  REPO_NAME: ${{ github.repository }}
+  IMAGE_NAME: marist-app
+  
 
 jobs:
   build-and-push-docker-image:
