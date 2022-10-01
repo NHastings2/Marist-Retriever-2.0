@@ -6,7 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: marist-app
-  USER: hastingsn25
+  USER: hastingsn2
   
 
 jobs:
