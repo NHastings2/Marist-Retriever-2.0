@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
   IMAGE_NAME: marist-app
-  USER: hastingsn2
+  USER: hastingsn25
   
 
 jobs:
@@ -24,14 +23,14 @@ jobs:
         id: meta
         uses: docker/metadata-action@v2
         with:
-          images: ${{ env.REGISTRY }}/${{ env.USER }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.USER }}/${{ env.IMAGE_NAME }}
+          flavor: latest=true
         
-      - name: Log into registry ${{ env.REGISTRY }}
+      - name: Log into registry Docker Hub
         uses: docker/login-action@v1
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          username: ${{ env.user }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
       
       - name: Build and Push Latest Docker Image
         id: build-and-push-latest
@@ -39,5 +38,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.USER }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.USER }}/${{ env.IMAGE_NAME }}:latest
           labels: ${{ steps.meta.outputs.labels }}
