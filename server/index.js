@@ -27,9 +27,6 @@ app.use(cors({
     ]
 }));
 
-//Setup CORS helmet instance
-app.use(helmet());
-
 //Setup json use in request body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
