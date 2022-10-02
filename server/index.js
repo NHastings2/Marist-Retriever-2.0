@@ -38,7 +38,7 @@ const tokenAge = (1000 * 60 * 60 * 24) * 30;
 
 //Setup Session Middleware
 app.use(session({ 
-    secret: "Kwkl2wA5Xk6!OJBM6*m*%BKkTp*P5B",
+    secret: generateSessionKey(30),
     saveUninitialized: false,
     cookie: { 
         maxAge: tokenAge,
@@ -275,3 +275,15 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server Listening on ${PORT}`);
 });
+
+const generateSessionKey = (myLength) => {
+    const chars =
+      "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890!*$%";
+    const randomArray = Array.from(
+      { length: myLength },
+      (v, k) => chars[Math.floor(Math.random() * chars.length)]
+    );
+  
+    const randomString = randomArray.join("");
+    return randomString;
+  };
