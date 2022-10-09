@@ -1,18 +1,26 @@
 #!/usr/bin/env node
 
 const express = require("express");
-const path = require('path');
-const zosConnector = require("zos-node-accessor");
+const session = require('express-session');
+const { check, validationResult } = require("express-validator");
+const rateLimit = require("express-rate-limit");
+
 const cors = require('cors');
 const helmet = require('helmet');
-const session = require('express-session');
 const cookieParser = require("cookie-parser");
+
+const path = require('path');
+const zosConnector = require("zos-node-accessor");
+
 
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
 
 //Create app instance
 const app = express();
+
+//Setup Rate Limiting
+const limiter = {}
 
 //Set CORS settings
 app.use(cors({
@@ -39,13 +47,13 @@ const tokenAge = (1000 * 60 * 60 * 24) * 30;
 const generateSessionKey = (myLength) => {
     const chars =
       "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890!*$%";
-    const randomArray = Array.from(
+    const sessionKeyArray = Array.from(
       { length: myLength },
       (v, k) => chars[Math.floor(Math.random() * chars.length)]
     );
   
-    const randomString = randomArray.join("");
-    return randomString;
+    const sessionKey = sessionKeyArray.join("");
+    return sessionKey;
 };
 
 //Setup Session Middleware
@@ -53,8 +61,9 @@ app.use(session({
     secret: generateSessionKey(30),
     saveUninitialized: false,
     cookie: { 
+        secure: "auto",
         maxAge: tokenAge,
-        httpOnly: false
+        httpOnly: true
     },
     resave: false
 }));
@@ -66,40 +75,56 @@ app.use(express.static(path.resolve(__dirname, '../client/build')));
 /**
  * Authenticate user from credentials provided
  */
-app.post("/api/login", async (req, res) => {
-    var accessor = new zosConnector();
+app.post("/api/login", [
+    check('username', 'INVALID USERNAME FORMAT').contains('KC').isString().isLength({ min: 6, max: 9 }),
+    check('password', 'INVALID PASSWORD FORMAT').isString().isLength({ max: 15 })
+], async (req, res) => {
 
-    try
-    {
-        //Attempt to connect to Marist
-        await accessor.connect({
-            user: req.body.username,
-            password: req.body.password,
-            host: "zos.kctr.marist.edu",
-            post: 21,
-            pasvTimeout: 5000,
-        });
-
-        //Close connection if successful
-        accessor.close();
-
-        //Create token from provided username and password
-        var session = req.session;
-        session.userid = req.body.username;
-        session.password = req.body.password;
-
-        //Send token json response
-        res.json({
-            "success": true,
-        });
-    }
-    catch(err)
-    {
-        console.log(err);
-        //If login is unsuccessful then send unsuccessful login response
+    const errors = validationResult(req);
+    if(!errors.isEmpty()) {
+        res.status(400);
         res.json({
             "success": false,
+            errors
         });
+    }
+    else
+    {
+        //Create accessor object for ZOS
+        var accessor = new zosConnector();
+
+        try
+        {
+            //Attempt to connect to Marist
+            await accessor.connect({
+                user: req.body.username,
+                password: req.body.password,
+                host: "zos.kctr.marist.edu",
+                post: 21,
+                pasvTimeout: 5000,
+            });
+
+            //Close connection if successful
+            accessor.close();
+
+            //Create token from provided username and password
+            var session = req.session;
+            session.userid = req.body.username;
+            session.password = req.body.password;
+
+            //Send token json response
+            res.json({
+                "success": true,
+            });
+        }
+        catch(err)
+        {
+            console.log(err);
+            //If login is unsuccessful then send unsuccessful login response
+            res.json({
+                "success": false,
+            });
+        }
     }
 });
 
@@ -172,67 +197,80 @@ app.get("/api/jobs", async (req, res) => {
  * Get JES output for specified job id
  * @param id JES Job ID
  */
-app.get('/api/jobs/:id', async (req, res) => {
+app.get('/api/jobs/:id', [
+    check('id', 'INVALID JOB ID').contains('JOB').isString().isLength({ min:8, max:8 })
+], async (req, res) => {
 
-    //Check if user provided auth token
-    if(req.session.userid)
-    {
-        //Create zos accessor instance
-        var accessor = new zosConnector();
-
-        //Connect to marist server
-        await accessor.connect({
-            user: req.session.userid,
-            password: req.session.password,
-            host: "zos.kctr.marist.edu",
-            post: 21,
-            pasvTimeout: 60000,
+    const errors = validationResult(req);
+    if(!errors.isEmpty()) {
+        res.status(400);
+        res.json({
+            "success": false,
+            "errors": errors
         });
-
-        //Retrieve all job log files from marist
-        var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
-
-        //Close accessor connection
-        accessor.close();
-
-        //Split file into individual lines
-        var finalData = "";
-        var lines = data.split('\r\n');
-
-        //Check over each line for formatting
-        lines.forEach(line => {
-            if(line.includes("!! END OF JES SPOOL FILE !!")) {   
-
-            }
-            else if(line.startsWith("0")) {
-                finalData += "\n" + line.substring(1, line.length) + "\n";
-            }
-            else if(line.startsWith("1")) {
-                finalData += "\f\n" + line.substring(1, line.length) + "\n";
-            }
-            else if (line.startsWith("-")) {
-                finalData += "\n\n" + line.substring(1, line.length) + "\n";
-            }
-            else if(line.startsWith(" ")) {
-                finalData += line.substring(1, line.length) + "\n";
-            }
-            else {
-                finalData += line + "\n";
-            }
-        });
-
-        //Set Download Headers
-        res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
-
-        //Send Download Content
-        res.send(finalData);
     }
     else
     {
-        //If user is not authenticated then send 401
-        res.status(401);
-        res.send('Invalid Session Provided');
+        //Check if user provided auth token
+        if(req.session.userid)
+        {
+            //Create zos accessor instance
+            var accessor = new zosConnector();
+
+            //Connect to marist server
+            await accessor.connect({
+                user: req.session.userid,
+                password: req.session.password,
+                host: "zos.kctr.marist.edu",
+                post: 21,
+                pasvTimeout: 60000,
+            });
+
+            //Retrieve all job log files from marist
+            var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
+
+            //Close accessor connection
+            accessor.close();
+
+            //Split file into individual lines
+            var finalData = "";
+            var lines = data.split('\r\n');
+
+            //Check over each line for formatting
+            lines.forEach(line => {
+                if(line.includes("!! END OF JES SPOOL FILE !!")) {   
+
+                }
+                else if(line.startsWith("0")) {
+                    finalData += "\n" + line.substring(1, line.length) + "\n";
+                }
+                else if(line.startsWith("1")) {
+                    finalData += "\f\n" + line.substring(1, line.length) + "\n";
+                }
+                else if (line.startsWith("-")) {
+                    finalData += "\n\n" + line.substring(1, line.length) + "\n";
+                }
+                else if(line.startsWith(" ")) {
+                    finalData += line.substring(1, line.length) + "\n";
+                }
+                else {
+                    finalData += line + "\n";
+                }
+            });
+
+            //Set Download Headers
+            res.setHeader("Content-Type", "application/octet-stream");
+            res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
+
+            //Send Download Content
+            res.send(finalData);
+        }
+        else
+        {
+            //If user is not authenticated then send 401
+            res.status(401);
+            res.send('Invalid Session Provided');
+        }
     }
 });
 
@@ -240,37 +278,69 @@ app.get('/api/jobs/:id', async (req, res) => {
  * Delete specified job
  * @param id JES Job ID
  */
-app.delete("/api/jobs/:id", async (req, res) => {
+app.delete("/api/jobs/:id", [
+    check('id', 'INVALID JOB ID').contains('JOB').isString().isLength({ min:8, max:8 })
+], async (req, res) => {
 
-    //Check if user has provided auth token
-    if(req.session.userid)
-    {
-        //Create zos accessor instance
-        var accessor = new zosConnector();
-
-        //Connect to marist server
-        await accessor.connect({
-            user: req.session.userid,
-            password: req.session.password,
-            host: "zos.kctr.marist.edu",
-            post: 21,
-            pasvTimeout: 60000,
+    const errors = validationResult(req);
+    if(!errors.isEmpty()) {
+        res.status(400);
+        res.json({
+            "success": false,
+            "errors": errors
         });
-
-        //Delete job from server
-        await accessor.deleteJob(req.params.id);
-
-        //Close connection to server
-        accessor.close();
-
-        //Send back successful message
-        res.send(`Job ${req.params.id} Deleted`)
     }
     else
     {
-        //If user is not authenticated then send 401
-        res.status(401);
-        res.send('Invalid Session Provided');
+        //Check if user has provided auth token
+        if(req.session.userid)
+        {
+            //Create zos accessor instance
+            var accessor = new zosConnector();
+
+            //Connect to marist server
+            await accessor.connect({
+                user: req.session.userid,
+                password: req.session.password,
+                host: "zos.kctr.marist.edu",
+                post: 21,
+                pasvTimeout: 60000,
+            });
+
+            try
+            {
+                //Delete job from server
+                await accessor.deleteJob(req.params.id);
+
+                //Close connection to server
+                accessor.close();
+
+                //Send back successful message
+                res.json({
+                    "success": true,
+                    "message": `Job ${req.params.id} Deleted`
+                });
+
+            }
+            catch(err)
+            {
+                //Close connection to server
+                accessor.close();
+
+                res.status(404);
+                res.json({
+                    "success": false,
+                    "message": "Job not found"
+                });
+            }
+
+        }
+        else
+        {
+            //If user is not authenticated then send 401
+            res.status(401);
+            res.send('Invalid Session Provided');
+        }
     }
 });
 
