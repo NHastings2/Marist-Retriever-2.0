@@ -20,7 +20,12 @@ const PORT = process.env.PORT || 3001;
 const app = express();
 
 //Setup Rate Limiting
-const limiter = {}
+const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000,  //10 minutes
+    max: 100,
+    standardHeader: true,
+    legacyHeaders: false
+});
 
 //Set CORS settings
 app.use(cors({
@@ -41,6 +46,8 @@ app.use(express.urlencoded({ extended: true }));
 
 //Setup Cookie Parser
 app.use(cookieParser());
+
+app.use(limiter);
 
 const tokenAge = (1000 * 60 * 60 * 24) * 30;
 
