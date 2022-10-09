@@ -31,13 +31,3 @@ export async function deleteJob(jobID) {
         return response.text();
     })
 }
-
-export async function logoutUser() {
-    return fetch('/api/logout', {
-        method: 'GET'
-    })
-    .then(data => data)
-    .then((response) => {
-        return response.text();
-    });
-}

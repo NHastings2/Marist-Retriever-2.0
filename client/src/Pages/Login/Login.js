@@ -1,25 +1,6 @@
 import React from "react";
 import './Login.css';
-
-/**
- * Authenticate user with provided credentials
- * @param {credential json} credentials 
- * @returns Response JSON from server
- */
-async function loginUser(credentials) {
-  //Send auth request to API server
-  return fetch('/api/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(credentials),
-  })
-  .then(data => data)
-  .then((response) => {
-    return response.json();
-  })
-}
+import { loginUser } from '../../Modules/Authentication.js';
 
 export default function Login() {
   //State containing username and password
