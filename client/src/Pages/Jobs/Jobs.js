@@ -1,7 +1,8 @@
 import React from "react";
 import "./Jobs.css";
 
-import { getJobs, getJob, deleteJob, logoutUser } from "./Marist";
+import { getJobs, deleteJob } from "../../Modules/Marist.js";
+import { logoutUser, checkSession } from "../../Modules/Authentication";
 
 import "bootstrap/dist/css/bootstrap.min.css"
 
