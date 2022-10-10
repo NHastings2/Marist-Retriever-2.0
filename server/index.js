@@ -277,7 +277,7 @@ app.get('/api/jobs/:id', [
         {
             //If user is not authenticated then send 401
             res.status(401);
-            res.send('Invalid Session Provided');
+            res.send("");
         }
     }
 });
