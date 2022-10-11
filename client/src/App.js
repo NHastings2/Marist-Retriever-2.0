@@ -13,7 +13,6 @@ class App extends React.Component
     //Get cookies from client
     const {cookies} = this.props;
 
-    console.log(!cookies.get('connect.sid'));
     //Check if user is logged in
     if(!cookies.get('connect.sid'))
       return <Login />
