@@ -69,7 +69,7 @@ app.use(session({
     cookie: { 
         secure: "auto",
         maxAge: tokenAge,
-        httpOnly: true,
+        httpOnly: false,
         sameSite: 'strict'
     },
     resave: false
