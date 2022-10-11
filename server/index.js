@@ -12,7 +12,6 @@ const cookieParser = require("cookie-parser");
 const path = require('path');
 const zosConnector = require("zos-node-accessor");
 
-
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
 
