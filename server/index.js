@@ -6,7 +6,6 @@ const { check, validationResult } = require("express-validator");
 const rateLimit = require("express-rate-limit");
 
 const cors = require('cors');
-const helmet = require('helmet');
 const cookieParser = require("cookie-parser");
 
 const path = require('path');
@@ -78,6 +77,23 @@ app.use(session({
 
 //Set use of React Frontend
 app.use(express.static(path.resolve(__dirname, '../client/build')));
+/**
+ * Get the current date/time timestamp
+ * @returns Formatted current Date & time
+ */
+function getDateTime() {
+    let date_ob = new Date();
+
+    let date = ("0" + date_ob.getDate()).slice(-2);
+    let month = ("0" + (date_ob.getMonth() + 1)).slice(-2);
+    let year = date_ob.getFullYear();
+
+    let hours = date_ob.getHours();
+    let minutes = date_ob.getMinutes();
+    let seconds = date_ob.getSeconds() < 10 ? "0" + date_ob.getSeconds() : date_ob.getSeconds();
+
+    return (year + "-" + month + "-" + date + " " + hours + ":" + minutes + ":" + seconds);
+}
 
 /**
  * Authenticate user from credentials provided
@@ -119,6 +135,9 @@ app.post("/api/login", [
             session.userid = req.body.username;
             session.password = req.body.password;
 
+            //Log login
+            console.log(getDateTime() + " - " + session.userid + " - Successful Login");
+
             //Send token json response
             res.json({
                 "success": true,
@@ -126,6 +145,8 @@ app.post("/api/login", [
         }
         catch(err)
         {
+            //Log login
+            console.log(getDateTime() + " - " + session.userid + " - Failed Login");
             console.log(err);
             //If login is unsuccessful then send unsuccessful login response
             res.json({
@@ -135,10 +156,45 @@ app.post("/api/login", [
     }
 });
 
+app.get('/api/session', (req, res) => {
+
+    if(req.session.userid == null || req.session.userid == undefined)
+    {
+        //Log session check
+        console.log(getDateTime() + " - Session Check Invalid");
+
+        //Destroy session token
+        req.session.destroy();
+        //Destroy Cookie
+        res.clearCookie("connect.sid");
+
+        //Return invalid session
+        res.json({
+            "success": false,
+            "message": "Session Token Invalid"
+        });
+    }
+    else
+    {
+        //Log Session Check
+        console.log(getDateTime() + " - " + req.session.userid + " Session Validated");
+
+        //Return Success
+        res.status(200);
+        res.json({
+            "success": true,
+            "message": "Session Token Valid"
+        });
+    }
+
+});
+
 /**
  * Logout user from application
  */
 app.get('/api/logout', (req, res) => {
+    //Log logout
+    console.log(getDateTime() + " - " + req.session.userid + " - Logged Out");
     //Destroy session token
     req.session.destroy();
     //Destroy Cookie
@@ -167,36 +223,54 @@ app.get("/api/jobs", async (req, res) => {
             pasvTimeout: 60000,
         });
 
-        //Get all jobs with user as owner
-        var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
-        accessor.close();
-        
-        //Check if there are jobs in the queue
-        var jobIds = [];
-        if(jobs[0] != 'No jobs found on Held queue')
+        try
         {
-            //If jobs in queue
-            for(let i = 0; i < jobs.length; i++)
-            {
-                //Parse job data and push owner and id to list
-                jobIds.push(
-                    {
-                        jobOwner: jobs[i].split('  ')[0], 
-                        jobID: jobs[i].split('  ')[1]
-                    }
-                );
-            }
-        }
+            //Get all jobs with user as owner
+            var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
+            accessor.close();
 
-        //Send user job list back to client
-        res.setHeader("Content-Type", "application/json");
-        res.send(JSON.stringify(jobIds));
+            //Check if there are jobs in the queue
+            var jobIds = [];
+            if(jobs[0] != 'No jobs found on Held queue')
+            {
+                //If jobs in queue
+                for(let i = 0; i < jobs.length; i++)
+                {
+                    //Parse job data and push owner and id to list
+                    jobIds.push(
+                        {
+                            jobOwner: jobs[i].split('  ')[0], 
+                            jobID: jobs[i].split('  ')[1]
+                        }
+                    );
+                }
+            }
+
+            //Log Retrieve Jobs
+            console.log(getDateTime() + " - " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
+
+            //Send user job list back to client
+            res.setHeader("Content-Type", "application/json");
+            res.json({
+                "success": true,
+                "jobs": jobIds
+            });
+        }
+        catch(err)
+        {
+            //Response with server error
+            res.status(500);
+            res.json({
+                "success": false,
+                "error": err
+            });
+        }
     }
     else
     {
         //If user is not authenticated then send 401
         res.status(401);
-        res.send('Invalid Session Provided');
+        res.json();
     }
 });
 
@@ -233,44 +307,61 @@ app.get('/api/jobs/:id', [
                 pasvTimeout: 60000,
             });
 
-            //Retrieve all job log files from marist
-            var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
+            try
+            {
+                //Retrieve all job log files from marist
+                var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
 
-            //Close accessor connection
-            accessor.close();
+                //Close accessor connection
+                accessor.close();
 
-            //Split file into individual lines
-            var finalData = "";
-            var lines = data.split('\r\n');
+                //Split file into individual lines
+                var finalData = "";
+                var lines = data.split('\r\n');
 
-            //Check over each line for formatting
-            lines.forEach(line => {
-                if(line.includes("!! END OF JES SPOOL FILE !!")) {   
+                //Check over each line for formatting
+                lines.forEach(line => {
+                    if(line.includes("!! END OF JES SPOOL FILE !!")) {   
 
-                }
-                else if(line.startsWith("0")) {
-                    finalData += "\n" + line.substring(1, line.length) + "\n";
-                }
-                else if(line.startsWith("1")) {
-                    finalData += "\f\n" + line.substring(1, line.length) + "\n";
-                }
-                else if (line.startsWith("-")) {
-                    finalData += "\n\n" + line.substring(1, line.length) + "\n";
-                }
-                else if(line.startsWith(" ")) {
-                    finalData += line.substring(1, line.length) + "\n";
-                }
-                else {
-                    finalData += line + "\n";
-                }
-            });
+                    }
+                    else if(line.startsWith("0")) {
+                        finalData += "\n" + line.substring(1, line.length) + "\n";
+                    }
+                    else if(line.startsWith("1")) {
+                        finalData += "\f\n" + line.substring(1, line.length) + "\n";
+                    }
+                    else if (line.startsWith("-")) {
+                        finalData += "\n\n" + line.substring(1, line.length) + "\n";
+                    }
+                    else if(line.startsWith(" ")) {
+                        finalData += line.substring(1, line.length) + "\n";
+                    }
+                    else {
+                        finalData += line + "\n";
+                    }
+                });
 
-            //Set Download Headers
-            res.setHeader("Content-Type", "application/octet-stream");
-            res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
+                //Log Retrieve Job
+                console.log(getDateTime() + " - " + req.session.userid + " - Retrieved Job: " + req.params.id);
 
-            //Send Download Content
-            res.send(finalData);
+                //Set Download Headers
+                res.setHeader("Content-Type", "application/octet-stream");
+                res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
+
+                //Send Download Content
+                res.send(finalData);
+            }
+            catch(err)
+            {
+                console.log(getDateTime() + " - " + err);
+
+                //Respond with server error
+                res.status(500);
+                res.json({
+                    "success": false,
+                    "error": err
+                })
+            }
         }
         else
         {
@@ -322,6 +413,9 @@ app.delete("/api/jobs/:id", [
                 //Close connection to server
                 accessor.close();
 
+                //Log Job Delete
+                console.log(getDateTime() + " - " + req.session.userid + " - Deleted Job: " + req.params.id);
+
                 //Send back successful message
                 res.json({
                     "success": true,
@@ -331,6 +425,9 @@ app.delete("/api/jobs/:id", [
             }
             catch(err)
             {
+                //Log error
+                console.log(getDateTime() + " - " + err);
+
                 //Close connection to server
                 accessor.close();
 

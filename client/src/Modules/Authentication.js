@@ -5,7 +5,7 @@
  */
 export async function loginUser(credentials) {
     //Send auth request to API server
-    return fetch('/api/login', {
+    return await fetch('/api/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -23,7 +23,13 @@ export async function loginUser(credentials) {
  * @return Response JSON from server
  */
 export async function checkSession() {
-
+  return await fetch('/api/session', {
+    method: 'GET',
+  })
+  .then(data => data)
+  .then((response) => {
+    return response.json();
+  })
 }
 
 /**
@@ -31,7 +37,7 @@ export async function checkSession() {
  * @returns Text response from server
  */
 export async function logoutUser() {
-    return fetch('/api/logout', {
+    return await fetch('/api/logout', {
         method: 'GET'
     })
     .then(data => data)
