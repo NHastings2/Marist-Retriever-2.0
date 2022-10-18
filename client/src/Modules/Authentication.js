@@ -28,7 +28,7 @@ export async function checkSession() {
   })
   .then(data => data)
   .then((response) => {
-    return response.json().success;
+    return response.json();
   })
 }
 
