@@ -12,7 +12,7 @@
     const data = await response.json();
 
     //Map JSON object and return new list
-    return data.map(({jobOwner, jobID}) => ({
+    return data.jobs.map(({jobOwner, jobID}) => ({
         jobID: jobID,
         jobOwner: jobOwner
     }));

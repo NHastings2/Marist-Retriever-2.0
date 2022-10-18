@@ -6,6 +6,7 @@ import './App.css';
 
 import Login from './Pages/Login/Login';
 import Jobs from './Pages/Jobs/Jobs';
+import { checkSession } from "./Modules/Authentication";
 
 class App extends React.Component
 {
