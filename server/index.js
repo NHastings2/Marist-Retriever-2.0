@@ -146,7 +146,7 @@ app.post("/api/login", [
         catch(err)
         {
             //Log login
-            console.log(getDateTime() + " - " + session.userid + " - Failed Login");
+            console.log(getDateTime() + " - Failed Login");
             console.log(err);
             //If login is unsuccessful then send unsuccessful login response
             res.json({
