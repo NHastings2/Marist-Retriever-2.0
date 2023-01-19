@@ -1,8 +1,8 @@
 import React from "react";
 import "./Jobs.css";
 
-import { getJobs, deleteJob } from "../../Modules/Marist.js";
-import { logoutUser, checkSession } from "../../Modules/Authentication";
+import { getJobs, deleteJob, purgeJobs } from "../../Modules/Marist.js";
+import { logoutUser } from "../../Modules/Authentication";
 
 import "bootstrap/dist/css/bootstrap.min.css"
 
@@ -30,17 +30,9 @@ export default function Jobs() {
     /**
      * Delete all jobs from server
      */
-    const purgeJobs = () => {
-        //Retrieve all current jobs
-        getJobs().then((data) => setJobs(data));
-
+    const clearJobs = () => {
         //Delete each job from the list
-        jobs.forEach(job => {
-            deleteJob(job.jobID).then();
-        });
-
-        //Retrieve update job list from server
-        getJobs().then((data) => setJobs(data));
+        purgeJobs().then((data) => retrieveJobs());
     }
 
     /**
@@ -86,7 +78,7 @@ export default function Jobs() {
                         <br></br>
                         </span>
                     </button>
-                    <button onClick={purgeJobs} className="purge-button button">Purge All Jobs</button>
+                    <button onClick={clearJobs} className="purge-button button">Purge All Jobs</button>
                 </div>
                 <div id="tableview" className="right-control-grp">
                     <div className="job-ctrl-grp">
