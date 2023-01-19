@@ -20,7 +20,7 @@ class App extends React.Component
       checkSession().then((response) => {
         console.log(response);
 
-        if(response.success == false)
+        if(response.success === false)
           window.location.reload();
       });
     } 

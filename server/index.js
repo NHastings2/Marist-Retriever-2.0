@@ -10,6 +10,7 @@ const cookieParser = require("cookie-parser");
 
 const path = require('path');
 const zosConnector = require("zos-node-accessor");
+const { access } = require("fs");
 
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
@@ -146,7 +147,7 @@ app.post("/api/login", [
         catch(err)
         {
             //Log login
-            console.log(getDateTime() + " - Failed Login");
+            console.log(getDateTime() + " - " + req.body.username + " - Failed Login");
             console.log(err);
             //If login is unsuccessful then send unsuccessful login response
             res.json({
@@ -445,6 +446,66 @@ app.delete("/api/jobs/:id", [
             res.status(401);
             res.send('Invalid Session Provided');
         }
+    }
+});
+
+app.delete("/api/purgeJobs", async (req, res) => {
+    if(req.session.userid)
+    {
+        var accessor = new zosConnector();
+
+        //Connect to marist server
+        await accessor.connect({
+            user: req.session.userid,
+            password: req.session.password,
+            host: "zos.kctr.marist.edu",
+            post: 21,
+            pasvTimeout: 60000,
+        });
+
+        try
+        {
+            var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
+
+            if(jobs[0] != 'No jobs found on Held queue')
+            {
+                //If jobs in queue
+                for(let i = 0; i < jobs.length; i++)
+                {
+                    accessor.deleteJob(jobs[i].split(' '[1]));
+                }
+            }
+
+            accessor.close();
+
+            //Log Retrieve Jobs
+            console.log(getDateTime() + " - Purged " + req.session.userid + " Jobs");
+
+            //Send user job list back to client
+            res.setHeader("Content-Type", "application/json");
+            res.json({
+                "success": true,
+            });
+        }
+        catch(err)
+        {
+            //Log error
+            console.log(getDateTime() + " - " + err);
+
+            //Close connection to server
+            accessor.close();
+
+            res.status(404);
+            res.json({
+                "success": false,
+                "message": "Job not found"
+            });
+        }
+    }
+    else
+    {
+        res.status(401);
+        res.send('Invalid Session Provided');
     }
 });
 
