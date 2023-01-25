@@ -31,3 +31,16 @@ export async function deleteJob(jobID) {
         return response.text();
     })
 }
+
+/**
+ * Purge all jobs from queue
+ */
+export async function purgeJobs() {
+    return fetch('/api/purgeJobs', {
+        method: 'DELETE',
+    })
+    .then(data => JSON.parse(data))
+    .then((response) => {
+        return response.text();
+    })
+}
