@@ -8,3 +8,12 @@
     color: red;
     text-align: center;
 }
+
+.secret {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    color: white;
+    size: 20px;
+    text-decoration: none;
+}

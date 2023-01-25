@@ -10,7 +10,6 @@ const cookieParser = require("cookie-parser");
 
 const path = require('path');
 const zosConnector = require("zos-node-accessor");
-const { access } = require("fs");
 
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
@@ -83,6 +82,7 @@ app.use(express.static(path.resolve(__dirname, '../client/build')));
  * @returns Formatted current Date & time
  */
 function getDateTime() {
+
     let date_ob = new Date();
 
     let date = ("0" + date_ob.getDate()).slice(-2);
@@ -148,7 +148,6 @@ app.post("/api/login", [
         {
             //Log login
             console.log(getDateTime() + " - " + req.body.username + " - Failed Login");
-            console.log(err);
             //If login is unsuccessful then send unsuccessful login response
             res.json({
                 "success": false,

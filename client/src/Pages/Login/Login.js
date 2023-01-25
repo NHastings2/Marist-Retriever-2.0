@@ -37,7 +37,7 @@ export default function Login() {
     <div className="Auth-form-container">
       <form className="Auth-form" onSubmit={handleLogin}>
         <div className="Auth-form-content">
-          <h3 className="Auth-form-title">Marist Job Retriever <br />Sign In</h3>
+          <h3 className="Auth-form-title">Marist Job Retriever<br />Sign In</h3>
           <div className="form-group mt-3">
             <label>Marist KC-ID</label>
             <input 
@@ -65,6 +65,7 @@ export default function Login() {
           </div>
         </div>
       </form>
+      <p className="secret"><a href="https://www.youtube.com/watch?v=pXPXMxsXT28">π</a></p>
     </div>
   );
 }
