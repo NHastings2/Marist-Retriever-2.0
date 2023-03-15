@@ -81,7 +81,7 @@ app.use(express.static(path.resolve(__dirname, '../client/build')));
 
 app.use((req, res, next) => {
     let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
-    console.log(`${getDateTime()} - ${clientIp}: ${req.session.userid} - ${req.method} - ${req.originalUrl}`);
+    console.log(`${getDateTime()} - ${clientIp}: ${req.session.userid ?? "Unauthenticated"} - ${req.method} - ${req.originalUrl}`);
     next();
 });
 
@@ -146,7 +146,8 @@ app.post("/api/login", [
         session.password = req.body.password;
 
         //Log login
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + session.userid + " - Successful Login");
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": " + session.userid + " - Successful Login");
 
         //Send token json response
         res.json({
@@ -156,7 +157,8 @@ app.post("/api/login", [
     catch(err)
     {
         //Log login
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.body.username + " - Failed Login");
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": " + req.body.username + " - Failed Login");
         //If login is unsuccessful then send unsuccessful login response
         res.json({
             "success": false,
@@ -169,7 +171,8 @@ app.get('/api/session', (req, res) => {
     if(req.session.userid == null || req.session.userid == undefined)
     {
         //Log session check
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": Session Check Invalid");
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": Session Check Invalid");
 
         //Destroy session token
         req.session.destroy();
@@ -185,7 +188,8 @@ app.get('/api/session', (req, res) => {
     else
     {
         //Log Session Check
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " Session Validated");
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": " + req.session.userid + " Session Validated");
 
         //Return Success
         res.status(200);
@@ -202,7 +206,8 @@ app.get('/api/session', (req, res) => {
  */
 app.get('/api/logout', (req, res) => {
     //Log logout
-    console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Logged Out");
+    let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+    console.log(getDateTime() + " - " + clientIp + ": Logged Out");
     //Destroy session token
     req.session.destroy();
     //Destroy Cookie
@@ -260,7 +265,8 @@ app.get("/api/jobs", async (req, res) => {
         }
 
         //Log Retrieve Jobs
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
 
         //Send user job list back to client
         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -354,7 +360,8 @@ app.get('/api/jobs/:id', [
         });
 
         //Log Retrieve Job
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Retrieved Job: " + req.params.id);
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": " + req.session.userid + " - Retrieved Job: " + req.params.id);
 
         //Set Download Headers
         res.setHeader("Content-Type", "application/octet-stream");
@@ -423,7 +430,8 @@ app.delete("/api/jobs/:id", [
         accessor.close();
 
         //Log Job Delete
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Deleted Job: " + req.params.id);
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": " + req.session.userid + " - Deleted Job: " + req.params.id);
 
         //Send back successful message
         res.json({
@@ -485,7 +493,8 @@ app.delete("/api/purgeJobs", async (req, res) => {
         accessor.close();
 
         //Log Retrieve Jobs
-        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": Purged " + req.session.userid + " Jobs");
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        console.log(getDateTime() + " - " + clientIp + ": Purged " + req.session.userid + " Jobs");
 
         //Send user job list back to client
         res.setHeader("Content-Type", "application/json; charset=utf-8");
