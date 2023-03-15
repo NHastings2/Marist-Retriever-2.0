@@ -22,7 +22,11 @@ class App extends React.Component
 
         if(response.success === false)
           window.location.reload();
-      });
+      })
+      .catch((error) => {
+        console.log("retrieveJobs errored - " + error);
+        window.location.reload();
+      });;
     } 
 
     //Check if user is logged in

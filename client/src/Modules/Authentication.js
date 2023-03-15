@@ -16,6 +16,9 @@ export async function loginUser(credentials) {
     .then((response) => {
       return response.json();
     })
+    .catch(() => {
+      return null;
+    });
   }
 
 /**
@@ -30,6 +33,9 @@ export async function checkSession() {
   .then((response) => {
     return response.json();
   })
+  .catch(() => {
+    return null;
+  });
 }
 
 /**
@@ -43,5 +49,8 @@ export async function logoutUser() {
     .then(data => data)
     .then((response) => {
         return response.text();
+    })
+    .catch(() => {
+      return null;
     });
 }

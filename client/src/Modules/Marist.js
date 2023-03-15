@@ -30,6 +30,9 @@ export async function deleteJob(jobID) {
     .then((response) => {
         return response.text();
     })
+    .catch(() => {
+        return null;
+      });
 }
 
 /**
@@ -43,4 +46,7 @@ export async function purgeJobs() {
     .then((response) => {
         return response.text();
     })
+    .catch(() => {
+        return null;
+      });
 }

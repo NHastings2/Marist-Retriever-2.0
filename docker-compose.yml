@@ -1,0 +1,10 @@
+ version: '3.4'
+
+ services:
+   marist-app:
+     image: hastingsn25/marist-app
+     build: .
+     environment:
+       NODE_ENV: production
+     ports:
+       - 80:3001
