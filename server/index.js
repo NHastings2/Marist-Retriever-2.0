@@ -11,11 +11,14 @@ const cookieParser = require("cookie-parser");
 const path = require('path');
 const zosConnector = require("zos-node-accessor");
 
+const ip = require("ip");
+
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
 
 //Create app instance
 const app = express();
+app.disable('x-powered-by');
 
 //Setup Rate Limiting
 const limiter = rateLimit({
@@ -77,6 +80,12 @@ app.use(session({
 
 //Set use of React Frontend
 app.use(express.static(path.resolve(__dirname, '../client/build')));
+
+app.use((req, res, next) => {
+    console.log(`${getDateTime()} - ${ip.address()}: ${req.session.userid} - ${req.method} - ${req.originalUrl}`);
+    next();
+});
+
 /**
  * Get the current date/time timestamp
  * @returns Formatted current Date & time
@@ -111,48 +120,48 @@ app.post("/api/login", [
             "success": false,
             errors
         });
+
+        return;
     }
-    else
+
+    //Create accessor object for ZOS
+    var accessor = new zosConnector();
+
+    try
     {
-        //Create accessor object for ZOS
-        var accessor = new zosConnector();
+        //Attempt to connect to Marist
+        await accessor.connect({
+            user: req.body.username,
+            password: req.body.password,
+            host: "zos.kctr.marist.edu",
+            post: 21,
+            pasvTimeout: 5000,
+        });
 
-        try
-        {
-            //Attempt to connect to Marist
-            await accessor.connect({
-                user: req.body.username,
-                password: req.body.password,
-                host: "zos.kctr.marist.edu",
-                post: 21,
-                pasvTimeout: 5000,
-            });
+        //Close connection if successful
+        accessor.close();
 
-            //Close connection if successful
-            accessor.close();
+        //Create token from provided username and password
+        var session = req.session;
+        session.userid = req.body.username;
+        session.password = req.body.password;
 
-            //Create token from provided username and password
-            var session = req.session;
-            session.userid = req.body.username;
-            session.password = req.body.password;
+        //Log login
+        console.log(getDateTime() + " - " + ip.address() + ": " + session.userid + " - Successful Login");
 
-            //Log login
-            console.log(getDateTime() + " - " + session.userid + " - Successful Login");
-
-            //Send token json response
-            res.json({
-                "success": true,
-            });
-        }
-        catch(err)
-        {
-            //Log login
-            console.log(getDateTime() + " - " + req.body.username + " - Failed Login");
-            //If login is unsuccessful then send unsuccessful login response
-            res.json({
-                "success": false,
-            });
-        }
+        //Send token json response
+        res.json({
+            "success": true,
+        });
+    }
+    catch(err)
+    {
+        //Log login
+        console.log(getDateTime() + " - " + ip.address() + ": " + req.body.username + " - Failed Login");
+        //If login is unsuccessful then send unsuccessful login response
+        res.json({
+            "success": false,
+        });
     }
 });
 
@@ -161,7 +170,7 @@ app.get('/api/session', (req, res) => {
     if(req.session.userid == null || req.session.userid == undefined)
     {
         //Log session check
-        console.log(getDateTime() + " - Session Check Invalid");
+        console.log(getDateTime() + " - " + ip.address() + ": Session Check Invalid");
 
         //Destroy session token
         req.session.destroy();
@@ -177,7 +186,7 @@ app.get('/api/session', (req, res) => {
     else
     {
         //Log Session Check
-        console.log(getDateTime() + " - " + req.session.userid + " Session Validated");
+        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " Session Validated");
 
         //Return Success
         res.status(200);
@@ -194,7 +203,7 @@ app.get('/api/session', (req, res) => {
  */
 app.get('/api/logout', (req, res) => {
     //Log logout
-    console.log(getDateTime() + " - " + req.session.userid + " - Logged Out");
+    console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Logged Out");
     //Destroy session token
     req.session.destroy();
     //Destroy Cookie
@@ -208,69 +217,67 @@ app.get('/api/logout', (req, res) => {
  */
 app.get("/api/jobs", async (req, res) => {
 
-    //Check if user provided auth token
-    if(req.session.userid)
-    {
-        //Create new zos accessor instance
-        var accessor = new zosConnector();
-
-        //Connect to marist server
-        await accessor.connect({
-            user: req.session.userid,
-            password: req.session.password,
-            host: "zos.kctr.marist.edu",
-            post: 21,
-            pasvTimeout: 60000,
-        });
-
-        try
-        {
-            //Get all jobs with user as owner
-            var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
-            accessor.close();
-
-            //Check if there are jobs in the queue
-            var jobIds = [];
-            if(jobs[0] != 'No jobs found on Held queue')
-            {
-                //If jobs in queue
-                for(let i = 0; i < jobs.length; i++)
-                {
-                    //Parse job data and push owner and id to list
-                    jobIds.push(
-                        {
-                            jobOwner: jobs[i].split('  ')[0], 
-                            jobID: jobs[i].split('  ')[1]
-                        }
-                    );
-                }
-            }
-
-            //Log Retrieve Jobs
-            console.log(getDateTime() + " - " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
-
-            //Send user job list back to client
-            res.setHeader("Content-Type", "application/json");
-            res.json({
-                "success": true,
-                "jobs": jobIds
-            });
-        }
-        catch(err)
-        {
-            //Response with server error
-            res.status(500);
-            res.json({
-                "success": false,
-                "error": err
-            });
-        }
-    }
-    else
-    {
+    if(!req.session.userid) {
         //If user is not authenticated then send 401
         res.status(401);
         res.json();
+
+        return;
+    }
+
+    //Create new zos accessor instance
+    var accessor = new zosConnector();
+
+    //Connect to marist server
+    await accessor.connect({
+        user: req.session.userid,
+        password: req.session.password,
+        host: "zos.kctr.marist.edu",
+        post: 21,
+        pasvTimeout: 60000,
+    });
+
+    try
+    {
+        //Get all jobs with user as owner
+        var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
+        accessor.close();
+
+        //Check if there are jobs in the queue
+        var jobIds = [];
+        if(jobs[0] != 'No jobs found on Held queue')
+        {
+            //If jobs in queue
+            for(let i = 0; i < jobs.length; i++)
+            {
+                //Parse job data and push owner and id to list
+                jobIds.push(
+                    {
+                        jobOwner: jobs[i].split('  ')[0], 
+                        jobID: jobs[i].split('  ')[1]
+                    }
+                );
+            }
+        }
+
+        //Log Retrieve Jobs
+        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
+
+        //Send user job list back to client
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.json({
+            "success": true,
+            "jobs": jobIds
+        });
+    }
+    catch(err)
+    {
+        //Response with server error
+        res.status(500);
+        res.json({
+            "success": false,
+            "error": err
+        });
     }
 });
 
@@ -289,86 +296,84 @@ app.get('/api/jobs/:id', [
             "success": false,
             "errors": errors
         });
+
+        return;
     }
-    else
+
+    if(req.session.userid) {
+        //If user is not authenticated then send 401
+        res.status(401);
+        res.send("");
+
+        return;
+    }
+
+    //Create zos accessor instance
+    var accessor = new zosConnector();
+
+    //Connect to marist server
+    await accessor.connect({
+        user: req.session.userid,
+        password: req.session.password,
+        host: "zos.kctr.marist.edu",
+        post: 21,
+        pasvTimeout: 60000,
+    });
+
+    try
     {
-        //Check if user provided auth token
-        if(req.session.userid)
-        {
-            //Create zos accessor instance
-            var accessor = new zosConnector();
+        //Retrieve all job log files from marist
+        var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
 
-            //Connect to marist server
-            await accessor.connect({
-                user: req.session.userid,
-                password: req.session.password,
-                host: "zos.kctr.marist.edu",
-                post: 21,
-                pasvTimeout: 60000,
-            });
+        //Close accessor connection
+        accessor.close();
 
-            try
-            {
-                //Retrieve all job log files from marist
-                var data = await accessor.getJobLog({ jobId: `${req.params.id}` });
+        //Split file into individual lines
+        var finalData = "";
+        var lines = data.split('\r\n');
 
-                //Close accessor connection
-                accessor.close();
+        //Check over each line for formatting
+        lines.forEach(line => {
+            if(line.includes("!! END OF JES SPOOL FILE !!")) {   
 
-                //Split file into individual lines
-                var finalData = "";
-                var lines = data.split('\r\n');
-
-                //Check over each line for formatting
-                lines.forEach(line => {
-                    if(line.includes("!! END OF JES SPOOL FILE !!")) {   
-
-                    }
-                    else if(line.startsWith("0")) {
-                        finalData += "\n" + line.substring(1, line.length) + "\n";
-                    }
-                    else if(line.startsWith("1")) {
-                        finalData += "\f\n" + line.substring(1, line.length) + "\n";
-                    }
-                    else if (line.startsWith("-")) {
-                        finalData += "\n\n" + line.substring(1, line.length) + "\n";
-                    }
-                    else if(line.startsWith(" ")) {
-                        finalData += line.substring(1, line.length) + "\n";
-                    }
-                    else {
-                        finalData += line + "\n";
-                    }
-                });
-
-                //Log Retrieve Job
-                console.log(getDateTime() + " - " + req.session.userid + " - Retrieved Job: " + req.params.id);
-
-                //Set Download Headers
-                res.setHeader("Content-Type", "application/octet-stream");
-                res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
-
-                //Send Download Content
-                res.send(finalData);
             }
-            catch(err)
-            {
-                console.log(getDateTime() + " - " + err);
-
-                //Respond with server error
-                res.status(500);
-                res.json({
-                    "success": false,
-                    "error": err
-                })
+            else if(line.startsWith("0")) {
+                finalData += "\n" + line.substring(1, line.length) + "\n";
             }
-        }
-        else
-        {
-            //If user is not authenticated then send 401
-            res.status(401);
-            res.send("");
-        }
+            else if(line.startsWith("1")) {
+                finalData += "\f\n" + line.substring(1, line.length) + "\n";
+            }
+            else if (line.startsWith("-")) {
+                finalData += "\n\n" + line.substring(1, line.length) + "\n";
+            }
+            else if(line.startsWith(" ")) {
+                finalData += line.substring(1, line.length) + "\n";
+            }
+            else {
+                finalData += line + "\n";
+            }
+        });
+
+        //Log Retrieve Job
+        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Retrieved Job: " + req.params.id);
+
+        //Set Download Headers
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader('Content-Disposition', 'attachment; filename=' + req.params.id + '.txt');
+
+        //Send Download Content
+        res.send(finalData);
+    }
+    catch(err)
+    {
+        console.log(getDateTime() + " - " + err);
+
+        //Respond with server error
+        res.status(500);
+        res.json({
+            "success": false,
+            "error": err
+        })
     }
 });
 
@@ -387,124 +392,121 @@ app.delete("/api/jobs/:id", [
             "success": false,
             "errors": errors
         });
+
+        return;
     }
-    else
+
+    if(!req.session.userid) {
+        res.status(401);
+        res.send('Invalid Session Provided');
+
+        return;
+    }
+
+    //Create zos accessor instance
+    var accessor = new zosConnector();
+
+    //Connect to marist server
+    await accessor.connect({
+        user: req.session.userid,
+        password: req.session.password,
+        host: "zos.kctr.marist.edu",
+        post: 21,
+        pasvTimeout: 60000,
+    });
+
+    try
     {
-        //Check if user has provided auth token
-        if(req.session.userid)
-        {
-            //Create zos accessor instance
-            var accessor = new zosConnector();
+        //Delete job from server
+        await accessor.deleteJob(req.params.id);
 
-            //Connect to marist server
-            await accessor.connect({
-                user: req.session.userid,
-                password: req.session.password,
-                host: "zos.kctr.marist.edu",
-                post: 21,
-                pasvTimeout: 60000,
-            });
+        //Close connection to server
+        accessor.close();
 
-            try
-            {
-                //Delete job from server
-                await accessor.deleteJob(req.params.id);
+        //Log Job Delete
+        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Deleted Job: " + req.params.id);
 
-                //Close connection to server
-                accessor.close();
+        //Send back successful message
+        res.json({
+            "success": true,
+            "message": `Job ${req.params.id} Deleted`
+        });
 
-                //Log Job Delete
-                console.log(getDateTime() + " - " + req.session.userid + " - Deleted Job: " + req.params.id);
-
-                //Send back successful message
-                res.json({
-                    "success": true,
-                    "message": `Job ${req.params.id} Deleted`
-                });
-
-            }
-            catch(err)
-            {
-                //Log error
-                console.log(getDateTime() + " - " + err);
-
-                //Close connection to server
-                accessor.close();
-
-                res.status(404);
-                res.json({
-                    "success": false,
-                    "message": "Job not found"
-                });
-            }
-
-        }
-        else
-        {
-            //If user is not authenticated then send 401
-            res.status(401);
-            res.send('Invalid Session Provided');
-        }
     }
+    catch(err)
+    {
+        //Log error
+        console.log(getDateTime() + " - " + err);
+
+        //Close connection to server
+        accessor.close();
+
+        res.status(404);
+        res.json({
+            "success": false,
+            "message": "Job not found"
+        });
+    }
+
 });
 
 app.delete("/api/purgeJobs", async (req, res) => {
-    if(req.session.userid)
-    {
-        var accessor = new zosConnector();
 
-        //Connect to marist server
-        await accessor.connect({
-            user: req.session.userid,
-            password: req.session.password,
-            host: "zos.kctr.marist.edu",
-            post: 21,
-            pasvTimeout: 60000,
-        });
-
-        try
-        {
-            var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
-
-            if(jobs[0] != 'No jobs found on Held queue')
-            {
-                //If jobs in queue
-                for(let i = 0; i < jobs.length; i++)
-                {
-                    accessor.deleteJob(jobs[i].split(' '[1]));
-                }
-            }
-
-            accessor.close();
-
-            //Log Retrieve Jobs
-            console.log(getDateTime() + " - Purged " + req.session.userid + " Jobs");
-
-            //Send user job list back to client
-            res.setHeader("Content-Type", "application/json");
-            res.json({
-                "success": true,
-            });
-        }
-        catch(err)
-        {
-            //Log error
-            console.log(getDateTime() + " - " + err);
-
-            //Close connection to server
-            accessor.close();
-
-            res.status(404);
-            res.json({
-                "success": false,
-                "message": "Job not found"
-            });
-        }
-    }
-    else
-    {
+    if(!req.session.userid) {
         res.status(401);
         res.send('Invalid Session Provided');
+
+        return;
+    }
+
+    var accessor = new zosConnector();
+
+    //Connect to marist server
+    await accessor.connect({
+        user: req.session.userid,
+        password: req.session.password,
+        host: "zos.kctr.marist.edu",
+        post: 21,
+        pasvTimeout: 60000,
+    });
+
+    try
+    {
+        var jobs = await accessor.listJobs({ owner: `${req.session.userid}A`});
+
+        if(jobs[0] != 'No jobs found on Held queue')
+        {
+            //If jobs in queue
+            for(let i = 0; i < jobs.length; i++)
+            {
+                accessor.deleteJob(jobs[i].split(' '[1]));
+            }
+        }
+
+        accessor.close();
+
+        //Log Retrieve Jobs
+        console.log(getDateTime() + " - " + ip.address() + ": Purged " + req.session.userid + " Jobs");
+
+        //Send user job list back to client
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
+        res.json({
+            "success": true,
+        });
+    }
+    catch(err)
+    {
+        //Log error
+        console.log(getDateTime() + " - " + err);
+
+        //Close connection to server
+        accessor.close();
+
+        res.status(404);
+        res.json({
+            "success": false,
+            "message": "Job not found"
+        });
     }
 });
 

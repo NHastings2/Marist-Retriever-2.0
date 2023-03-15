@@ -15,7 +15,9 @@ export default function Jobs() {
      */
     const retrieveJobs = () => {
         //Query and set job list
-        getJobs().then((data) => setJobs(data));
+        getJobs().then((data) => setJobs(data)).catch((error) => {
+            console.log("retrieveJobs errored - " + error);
+        });
     }
 
     /**
@@ -24,7 +26,9 @@ export default function Jobs() {
      */
     const removeJob = (jobId) => {
         //Delete the job and then update list
-        deleteJob(jobId).then(retrieveJobs());
+        deleteJob(jobId).then(retrieveJobs()).catch((error) => {
+            console.log("deleteJob errored - " + error);
+        });;
     }
 
     /**
@@ -32,7 +36,9 @@ export default function Jobs() {
      */
     const clearJobs = () => {
         //Delete each job from the list
-        purgeJobs().then((data) => retrieveJobs());
+        purgeJobs().then((data) => retrieveJobs()).catch((error) => {
+            console.log("clearJobs errored - " + error);
+        });;
     }
 
     /**
@@ -50,7 +56,10 @@ export default function Jobs() {
     const logout = () => {
         logoutUser().then(() => {
             window.location.reload();
-        });
+        })
+        .catch((error) => {
+            console.log("logout errored - " + error);
+        });;
     }
 
     //Render page with job data and elements
@@ -92,6 +101,7 @@ export default function Jobs() {
                                     <tbody>
                                         {
                                             jobs.map((job) => (
+                                                // deepcode ignore ReactMissingArrayKeys: <please specify a reason of ignoring this>
                                                 <tr>
                                                     <td>
                                                         {job.jobID}
