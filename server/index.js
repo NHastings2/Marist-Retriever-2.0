@@ -11,8 +11,6 @@ const cookieParser = require("cookie-parser");
 const path = require('path');
 const zosConnector = require("zos-node-accessor");
 
-const ip = require("ip");
-
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
 
@@ -82,7 +80,7 @@ app.use(session({
 app.use(express.static(path.resolve(__dirname, '../client/build')));
 
 app.use((req, res, next) => {
-    console.log(`${getDateTime()} - ${ip.address()}: ${req.session.userid} - ${req.method} - ${req.originalUrl}`);
+    console.log(`${getDateTime()} - ${req.socket.remoteAddress}: ${req.session.userid} - ${req.method} - ${req.originalUrl}`);
     next();
 });
 
@@ -147,7 +145,7 @@ app.post("/api/login", [
         session.password = req.body.password;
 
         //Log login
-        console.log(getDateTime() + " - " + ip.address() + ": " + session.userid + " - Successful Login");
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + session.userid + " - Successful Login");
 
         //Send token json response
         res.json({
@@ -157,7 +155,7 @@ app.post("/api/login", [
     catch(err)
     {
         //Log login
-        console.log(getDateTime() + " - " + ip.address() + ": " + req.body.username + " - Failed Login");
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.body.username + " - Failed Login");
         //If login is unsuccessful then send unsuccessful login response
         res.json({
             "success": false,
@@ -170,7 +168,7 @@ app.get('/api/session', (req, res) => {
     if(req.session.userid == null || req.session.userid == undefined)
     {
         //Log session check
-        console.log(getDateTime() + " - " + ip.address() + ": Session Check Invalid");
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": Session Check Invalid");
 
         //Destroy session token
         req.session.destroy();
@@ -186,7 +184,7 @@ app.get('/api/session', (req, res) => {
     else
     {
         //Log Session Check
-        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " Session Validated");
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " Session Validated");
 
         //Return Success
         res.status(200);
@@ -203,7 +201,7 @@ app.get('/api/session', (req, res) => {
  */
 app.get('/api/logout', (req, res) => {
     //Log logout
-    console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Logged Out");
+    console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Logged Out");
     //Destroy session token
     req.session.destroy();
     //Destroy Cookie
@@ -261,7 +259,7 @@ app.get("/api/jobs", async (req, res) => {
         }
 
         //Log Retrieve Jobs
-        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Retrieved " + jobIds.length + " Jobs");
 
         //Send user job list back to client
         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -355,7 +353,7 @@ app.get('/api/jobs/:id', [
         });
 
         //Log Retrieve Job
-        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Retrieved Job: " + req.params.id);
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Retrieved Job: " + req.params.id);
 
         //Set Download Headers
         res.setHeader("Content-Type", "application/octet-stream");
@@ -424,7 +422,7 @@ app.delete("/api/jobs/:id", [
         accessor.close();
 
         //Log Job Delete
-        console.log(getDateTime() + " - " + ip.address() + ": " + req.session.userid + " - Deleted Job: " + req.params.id);
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": " + req.session.userid + " - Deleted Job: " + req.params.id);
 
         //Send back successful message
         res.json({
@@ -486,7 +484,7 @@ app.delete("/api/purgeJobs", async (req, res) => {
         accessor.close();
 
         //Log Retrieve Jobs
-        console.log(getDateTime() + " - " + ip.address() + ": Purged " + req.session.userid + " Jobs");
+        console.log(getDateTime() + " - " + req.socket.remoteAddress + ": Purged " + req.session.userid + " Jobs");
 
         //Send user job list back to client
         res.setHeader("Content-Type", "application/json; charset=utf-8");
