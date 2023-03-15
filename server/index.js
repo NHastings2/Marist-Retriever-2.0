@@ -80,7 +80,8 @@ app.use(session({
 app.use(express.static(path.resolve(__dirname, '../client/build')));
 
 app.use((req, res, next) => {
-    console.log(`${getDateTime()} - ${req.socket.remoteAddress}: ${req.session.userid} - ${req.method} - ${req.originalUrl}`);
+    let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+    console.log(`${getDateTime()} - ${clientIp}: ${req.session.userid} - ${req.method} - ${req.originalUrl}`);
     next();
 });
 
