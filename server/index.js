@@ -305,10 +305,10 @@ app.get('/api/jobs/:id', [
         return;
     }
 
-    if(req.session.userid) {
+    if(!req.session.userid) {
         //If user is not authenticated then send 401
         res.status(401);
-        res.send("");
+        res.send();
 
         return;
     }
