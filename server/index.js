@@ -21,7 +21,7 @@ app.disable('x-powered-by');
 //Setup Rate Limiting
 const limiter = rateLimit({
     windowMs: 10 * 60 * 1000,  //10 minutes
-    max: 100,
+    max: 10000,
     standardHeader: true,
     legacyHeaders: false
 });
