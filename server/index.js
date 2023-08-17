@@ -27,7 +27,7 @@ const limiter = rateLimit({
 });
 
 //Set CORS settings
-app.use(cors({
+/*app.use(cors({
     origin: '*',
     methods: [
         'GET',
@@ -38,6 +38,7 @@ app.use(cors({
         'Content-Type'
     ]
 }));
+*/
 
 //Setup json use in request body
 app.use(express.json());
