@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 
-const express = require("express");
+const express = require('express');
 const session = require('express-session');
-const { check, validationResult } = require("express-validator");
-const rateLimit = require("express-rate-limit");
+const { check, validationResult } = require('express-validator');
+const rateLimit = require('express-rate-limit');
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
 
 const cors = require('cors');
-const cookieParser = require("cookie-parser");
+const cookieParser = require('cookie-parser');
 
 const path = require('path');
-const zosConnector = require("zos-node-accessor");
+const zosConnector = require('zos-node-accessor');
 
 //Set default port or env port
 const PORT = process.env.PORT || 3001;
@@ -17,6 +19,7 @@ const PORT = process.env.PORT || 3001;
 //Create app instance
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 //Setup Rate Limiting
 const limiter = rateLimit({
@@ -27,18 +30,18 @@ const limiter = rateLimit({
 });
 
 //Set CORS settings
-/*app.use(cors({
-    origin: '*',
-    methods: [
-        'GET',
-        'POST',
-        'DELETE'
-    ],
-    allowedHeader: [
-        'Content-Type'
-    ]
-}));
-*/
+// app.use(cors({
+//     origin: '*',
+//     methods: [
+//         'GET',
+//         'POST',
+//         'DELETE'
+//     ],
+//     allowedHeader: [
+//         'Content-Type'
+//     ]
+// }));
+
 
 //Setup json use in request body
 app.use(express.json());
@@ -63,17 +66,32 @@ const generateSessionKey = (myLength) => {
     return sessionKey;
 };
 
+const redisClient = redis.createClient({
+    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
+});
+
+redisClient.connect().catch(console.error);
+
+redisClient.on('error', function (err) {
+    console.log('Could not establish a connection with redis. ' + err);
+});
+
+redisClient.on('connect', function (err) {
+    console.log('Connected to Redis Successfully');
+});
+
 //Setup Session Middleware
 app.use(session({ 
+    store: new RedisStore({ client: redisClient }),
     secret: generateSessionKey(30),
     saveUninitialized: false,
+    resave: false,
     cookie: { 
         secure: "auto",
         maxAge: tokenAge,
         httpOnly: false,
         sameSite: 'strict'
-    },
-    resave: false
+    }
 }));
 
 
@@ -129,17 +147,20 @@ app.post("/api/login", [
 
     try
     {
-        //Attempt to connect to Marist
-        await accessor.connect({
-            user: req.body.username,
-            password: req.body.password,
-            host: "zos.kctr.marist.edu",
-            post: 21,
-            pasvTimeout: 5000,
-        });
+        if(req.body.username != "KCTEST")
+        {
+            //Attempt to connect to Marist
+            await accessor.connect({
+                user: req.body.username,
+                password: req.body.password,
+                host: "zos.kctr.marist.edu",
+                post: 21,
+                pasvTimeout: 5000,
+            });
 
-        //Close connection if successful
-        accessor.close();
+            //Close connection if successful
+            accessor.close();
+        }
 
         //Create token from provided username and password
         var session = req.session;
@@ -147,8 +168,10 @@ app.post("/api/login", [
         session.password = req.body.password;
 
         //Log login
-        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress
+        let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         console.log(getDateTime() + " - " + clientIp + ": " + session.userid + " - Successful Login");
+
+        session.ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
         //Send token json response
         res.json({
