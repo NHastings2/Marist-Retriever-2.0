@@ -147,20 +147,17 @@ app.post("/api/login", [
 
     try
     {
-        if(req.body.username != "KCTEST")
-        {
-            //Attempt to connect to Marist
-            await accessor.connect({
-                user: req.body.username,
-                password: req.body.password,
-                host: "zos.kctr.marist.edu",
-                post: 21,
-                pasvTimeout: 5000,
-            });
+        //Attempt to connect to Marist
+        await accessor.connect({
+            user: req.body.username,
+            password: req.body.password,
+            host: "zos.kctr.marist.edu",
+            post: 21,
+            pasvTimeout: 5000,
+        });
 
-            //Close connection if successful
-            accessor.close();
-        }
+        //Close connection if successful
+        accessor.close();
 
         //Create token from provided username and password
         var session = req.session;
