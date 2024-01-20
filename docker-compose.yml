@@ -6,5 +6,8 @@
      build: .
      environment:
        NODE_ENV: production
+       TZ: America\Chicago
+       REDIS_HOST: docker-main.local
+       REDIS_PORT: 6379
      ports:
        - 80:3001
